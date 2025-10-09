@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  khqr-payment:
+    build: .
+    container_name: khqr-payment
+    ports:
+      - "9005:9005"
+    environment:
+      - BAKONG_DEV_TOKEN=${BAKONG_DEV_TOKEN}
+      - BAKONG_BANK_ACCOUNT=${BAKONG_BANK_ACCOUNT}
+      - BAKONG_MERCHANT_NAME=${BAKONG_MERCHANT_NAME}
+      - BAKONG_MERCHANT_CITY=${BAKONG_MERCHANT_CITY}
+      - BAKONG_DEFAULT_CURRENCY=${BAKONG_DEFAULT_CURRENCY}
+    volumes:
+      - .:/var/www/html
