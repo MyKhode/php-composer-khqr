@@ -1,16 +1,21 @@
-version: '3.8'
-
 services:
-  khqr-payment:
+  app:
     build: .
-    container_name: khqr-payment
-    ports:
-      - "9005:9005"
     environment:
-      - BAKONG_DEV_TOKEN=${BAKONG_DEV_TOKEN}
-      - BAKONG_BANK_ACCOUNT=${BAKONG_BANK_ACCOUNT}
-      - BAKONG_MERCHANT_NAME=${BAKONG_MERCHANT_NAME}
-      - BAKONG_MERCHANT_CITY=${BAKONG_MERCHANT_CITY}
-      - BAKONG_DEFAULT_CURRENCY=${BAKONG_DEFAULT_CURRENCY}
+      DB_HOST: "host.docker.internal"
+      DB_PORT: "4987"
+      DB_NAME: "khqr_store"
+      DB_USER: "root"
+      DB_PASS: "ikhode"
+      BAKONG_DEV_TOKEN: ${BAKONG_DEV_TOKEN}
+      BAKONG_BANK_ACCOUNT: ${BAKONG_BANK_ACCOUNT}
+      BAKONG_MERCHANT_NAME: ${BAKONG_MERCHANT_NAME}
+      BAKONG_MERCHANT_CITY: ${BAKONG_MERCHANT_CITY}
+      ADMIN_DEFAULT_USERNAME: ${ADMIN_DEFAULT_USERNAME:-admin}
+      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-admin@2003}
+    ports:
+      - "9005:80"
     volumes:
       - .:/var/www/html
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

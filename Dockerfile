@@ -1,31 +1,27 @@
-# Use PHP 8.2 with Apache
+# PHP 8.2 with Apache
 FROM php:8.2-apache
 
-# Install required PHP extensions (GD, PDO, etc.)
 RUN apt-get update && apt-get install -y \
-        libfreetype6-dev \
-        libjpeg62-turbo-dev \
-        libpng-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_mysql
+    libfreetype6-dev libjpeg62-turbo-dev libpng-dev git unzip \
+ && docker-php-ext-configure gd --with-freetype --with-jpeg \
+ && docker-php-ext-install gd pdo pdo_mysql
 
-# Allow composer to run as root
 ENV COMPOSER_ALLOW_SUPERUSER=1
-
-# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
 WORKDIR /var/www/html
-
-# Copy all files
 COPY . .
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader
+# ✅ Add this line to apply php.ini overrides
+COPY php.ini /usr/local/etc/php/conf.d/uploads.ini
 
-# Expose port 9005
+# Fix git “dubious ownership” + refresh lock to include Phinx
+RUN git config --global --add safe.directory /var/www/html \
+ && composer update --no-dev --no-interaction --prefer-dist
+
+# Enable Apache rewrite; serve /public
+RUN a2enmod rewrite \
+ && sed -i 's#/var/www/html#/var/www/html/public#' /etc/apache2/sites-available/000-default.conf
+
 EXPOSE 9005
-
-# Run built-in PHP server
-CMD ["php", "-S", "0.0.0.0:9005", "khqr_api.php"]
+CMD ["apache2-foreground"]

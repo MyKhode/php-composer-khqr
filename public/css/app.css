@@ -1,0 +1,33 @@
+:root{--bg:#0d0d0f;--card:#17171a;--muted:#9aa1a9;--text:#f1f1f1;--primary:#4f7cff;--danger:#ff5b5b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Arial,sans-serif}
+.container{max-width:980px;margin:0 auto;padding:24px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.card{display:block;background:var(--card);border-radius:12px;overflow:hidden;text-decoration:none;color:inherit}
+.card img{width:100%;height:160px;object-fit:cover}
+.card-body{padding:12px}
+.price{font-weight:700}
+.btn{background:var(--primary);color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer}
+.btn.small{padding:6px 10px;border-radius:6px}
+.btn.danger{background:var(--danger)}
+.muted{color:var(--muted)}
+.product-view{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.product-view .hero{width:100%;border-radius:12px}
+.auth{min-height:100vh;display:grid;place-items:center}
+.card.auth-card{width:360px;padding:24px}
+.card{padding:0}
+.card form, form.card{padding:16px}
+.alert{background:#2a2a2e;color:#ffd7d7;padding:10px;border-radius:8px;margin:8px 0}
+.table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden}
+.table th,.table td{padding:10px;border-bottom:1px solid #23232a}
+.thumb{width:56px;height:40px;object-fit:cover;border-radius:6px}
+.admin{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+.sidebar{background:#111114;padding:16px}
+.sidebar a{display:block;color:#cfd3d8;text-decoration:none;margin:8px 0}
+.sidebar a:hover{color:#fff}
+.header-row{display:flex;justify-content:space-between;align-items:center}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stat{background:var(--card);padding:16px;border-radius:12px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:9999}
+.modal .modal-content{position:relative;background:#141416;padding:24px;border-radius:12px;max-width:420px;width:90%;text-align:center;z-index:10000}
+.modal .close{position:absolute;right:12px;top:12px;background:transparent;border:0;color:#aaa;font-size:18px;cursor:pointer;z-index:10001}
