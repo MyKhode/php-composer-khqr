@@ -12,6 +12,8 @@ class StoreController
 
         $category = trim($_GET['category'] ?? '');
         $search   = trim($_GET['q'] ?? '');
+        $page     = max(1, (int)($_GET['page'] ?? 1));
+        $perPage  = max(1, min(30, (int)($_GET['per_page'] ?? 9))); // 9 fits 3x3 grid nicely
 
         // Fetch all categories for dropdown
         $categories = $pdo->query("
@@ -20,7 +22,29 @@ class StoreController
             ORDER BY category
         ")->fetchAll(\PDO::FETCH_COLUMN);
 
-        // Group products by name to show only one card per group
+        // Build filters for visible, in-stock products
+        $where = "WHERE COALESCE(is_hidden,0)=0 AND COALESCE(is_sold_out,0)=0";
+        $params = [];
+        if ($category !== '') {
+            $where .= " AND category = ?";
+            $params[] = $category;
+        }
+        if ($search !== '') {
+            $where .= " AND (name LIKE ? OR category LIKE ?)";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+
+        // Count distinct product groups for pagination
+        $countSql = "SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM products $where GROUP BY name, category, photo_base64) t";
+        $c = $pdo->prepare($countSql);
+        $c->execute($params);
+        $total = (int)($c->fetch()['cnt'] ?? 0);
+        $pages = max(1, (int)ceil($total / $perPage));
+        if ($page > $pages) { $page = $pages; }
+        $offset = ($page - 1) * $perPage;
+
+        // Fetch a page of grouped products
         $sql = "
             SELECT 
                 MIN(id) AS id,
@@ -29,28 +53,14 @@ class StoreController
                 MIN(price) AS price,
                 MAX(price) AS max_price,
                 photo_base64,
-                COUNT(*) AS count_same_name
+                COUNT(*) AS count_same_name,
+                MAX(created_at) AS latest_created
             FROM products
-            WHERE COALESCE(is_hidden,0)=0
-            AND COALESCE(is_sold_out,0)=0
+            $where
+            GROUP BY name, category, photo_base64
+            ORDER BY latest_created DESC
+            LIMIT $perPage OFFSET $offset
         ";
-
-        $params = [];
-
-        if ($category !== '') {
-            $sql .= " AND category = ?";
-            $params[] = $category;
-        }
-
-        if ($search !== '') {
-            $sql .= " AND (name LIKE ? OR category LIKE ?)";
-            $params[] = "%$search%";
-            $params[] = "%$search%";
-        }
-
-        $sql .= " GROUP BY name, category, photo_base64
-                ORDER BY MAX(created_at) DESC";
-
         $st = $pdo->prepare($sql);
         $st->execute($params);
         $products = $st->fetchAll();
@@ -64,7 +74,7 @@ class StoreController
             ORDER BY category
         ")->fetchAll(\PDO::FETCH_COLUMN);
 
-        Response::view('store/home.php', compact('products', 'categories', 'category', 'search'));
+        Response::view('store/home.php', compact('products', 'categories', 'category', 'search', 'page', 'perPage', 'pages', 'total'));
     }
 
 

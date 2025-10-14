@@ -117,6 +117,61 @@
       </table>
     </div>
 
+    <?php if (($pages ?? 1) > 1): ?>
+      <?php
+        $currPage = (int)($page ?? 1);
+        $totalPages = (int)($pages ?? 1);
+        $query = $_GET ?? [];
+        unset($query['page']);
+        $base = '/admin/sales';
+        $qs = http_build_query($query);
+        $baseQs = $base . ($qs ? ('?' . htmlspecialchars($qs)) : '');
+        $sep = $qs ? '&' : '?';
+
+        $window = 2; // how many pages around current
+        $start = max(1, $currPage - $window);
+        $end = min($totalPages, $currPage + $window);
+      ?>
+      <div class="flex items-center justify-between mt-4">
+        <div class="text-xs text-neutral-400">
+          Page <?= $currPage ?> of <?= $totalPages ?> · <?= (int)($total ?? 0) ?> orders
+        </div>
+        <div class="flex items-center gap-1">
+          <?php if ($currPage > 1): ?>
+            <a class="px-3 py-1.5 rounded-md border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 text-sm"
+               href="<?= $baseQs . $sep . 'page=' . ($currPage - 1) ?>">Prev</a>
+          <?php else: ?>
+            <span class="px-3 py-1.5 rounded-md border border-neutral-900 bg-neutral-950 text-sm text-neutral-600">Prev</span>
+          <?php endif; ?>
+
+          <?php if ($start > 1): ?>
+            <a class="px-3 py-1.5 rounded-md border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 text-sm" href="<?= $baseQs . $sep . 'page=1' ?>">1</a>
+            <?php if ($start > 2): ?><span class="px-2 text-neutral-500">…</span><?php endif; ?>
+          <?php endif; ?>
+
+          <?php for ($i = $start; $i <= $end; $i++): ?>
+            <?php if ($i === $currPage): ?>
+              <span class="px-3 py-1.5 rounded-md border border-blue-700 bg-blue-900/40 text-blue-300 text-sm"><?= $i ?></span>
+            <?php else: ?>
+              <a class="px-3 py-1.5 rounded-md border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 text-sm" href="<?= $baseQs . $sep . 'page=' . $i ?>"><?= $i ?></a>
+            <?php endif; ?>
+          <?php endfor; ?>
+
+          <?php if ($end < $totalPages): ?>
+            <?php if ($end < $totalPages - 1): ?><span class="px-2 text-neutral-500">…</span><?php endif; ?>
+            <a class="px-3 py-1.5 rounded-md border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 text-sm" href="<?= $baseQs . $sep . 'page=' . $totalPages ?>"><?= $totalPages ?></a>
+          <?php endif; ?>
+
+          <?php if ($currPage < $totalPages): ?>
+            <a class="px-3 py-1.5 rounded-md border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 text-sm"
+               href="<?= $baseQs . $sep . 'page=' . ($currPage + 1) ?>">Next</a>
+          <?php else: ?>
+            <span class="px-3 py-1.5 rounded-md border border-neutral-900 bg-neutral-950 text-sm text-neutral-600">Next</span>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endif; ?>
+
     <!-- Modal overlay -->
     <div id="saleDetailModal"
          class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">

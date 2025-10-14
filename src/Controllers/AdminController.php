@@ -50,8 +50,15 @@ class AdminController
         $pdo = Db::pdo();
 
         $stats = [
-            'products'     => (int)$pdo->query('SELECT COUNT(*) c FROM products')->fetch()['c'],
-            'keys_instock' => (int)$pdo->query('SELECT COUNT(*) c FROM license_keys WHERE is_sold=0')->fetch()['c'],
+            'products'     => (int)$pdo->query("SELECT COUNT(*) c FROM products WHERE COALESCE(is_sold_out,0)=0 AND COALESCE(is_hidden,0)=0")->fetch()['c'],
+            'keys_instock' => (int)$pdo->query(
+                "SELECT COUNT(lk.id) c
+                 FROM license_keys lk
+                 JOIN products p ON p.id = lk.product_id
+                 WHERE lk.is_sold = 0
+                   AND COALESCE(p.is_sold_out,0) = 0
+                   AND COALESCE(p.is_hidden,0) = 0"
+            )->fetch()['c'],
             'orders_paid'  => (int)$pdo->query("SELECT COUNT(*) c FROM orders WHERE status='paid'")->fetch()['c'],
             'revenue'      => (float)$pdo->query("SELECT COALESCE(SUM(total_amount),0) s FROM orders WHERE status='paid'")->fetch()['s'],
         ];
@@ -213,51 +220,73 @@ public function sales(): void {
     $search = trim($_GET['q'] ?? '');
     $from = trim($_GET['from'] ?? '');
     $to   = trim($_GET['to'] ?? '');
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $perPage = max(1, min(50, (int)($_GET['per_page'] ?? 10)));
 
-    $sql = "
-        SELECT 
-            o.id AS order_id,
-            o.transaction_id,
-            o.buyer_name,
-            o.buyer_phone,
-            o.buyer_telegram,
-            o.total_amount,
-            o.created_at,
-            oi.id AS item_id,
-            oi.delivery_status,
-            oi.proof_image_base64,
-            p.name AS product_name_current,
-            lk.license_key
-        FROM orders o
-        JOIN order_items oi ON oi.order_id = o.id
-        LEFT JOIN products p ON p.id = oi.product_id
-        LEFT JOIN license_keys lk ON lk.id = oi.license_key_id
-        WHERE o.status='paid'
-    ";
-
+    // Build WHERE for paid orders + optional filters
+    $where = "WHERE o.status='paid'";
     $params = [];
-
-    // Search (TX ID, buyer, phone)
     if ($search !== '') {
-        $sql .= " AND (o.transaction_id LIKE ? OR o.buyer_name LIKE ? OR o.buyer_phone LIKE ?)";
+        $where .= " AND (o.transaction_id LIKE ? OR o.buyer_name LIKE ? OR o.buyer_phone LIKE ?)";
         $params = ["%$search%", "%$search%", "%$search%"];
     }
-
-    // Date filter
     if ($from !== '') {
-        $sql .= " AND DATE(o.created_at) >= ?";
+        $where .= " AND DATE(o.created_at) >= ?";
         $params[] = $from;
     }
     if ($to !== '') {
-        $sql .= " AND DATE(o.created_at) <= ?";
+        $where .= " AND DATE(o.created_at) <= ?";
         $params[] = $to;
     }
+    // If tab is preparing, only include orders that have at least one preparing item
+    if ($tab === 'preparing') {
+        $where .= " AND EXISTS (SELECT 1 FROM order_items oi2 WHERE oi2.order_id = o.id AND oi2.delivery_status = 'preparing')";
+    }
 
-    $sql .= " ORDER BY o.created_at DESC, oi.id ASC";
+    // Count total orders matching filters
+    $countSql = "SELECT COUNT(*) AS cnt FROM orders o $where";
+    $cStmt = $pdo->prepare($countSql);
+    $cStmt->execute($params);
+    $total = (int)($cStmt->fetch()['cnt'] ?? 0);
+    $pages = max(1, (int)ceil($total / $perPage));
+    if ($page > $pages) { $page = $pages; }
+    $offset = ($page - 1) * $perPage;
 
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    $rows = $stmt->fetchAll();
+    // Fetch page of order ids (inject validated ints for LIMIT/OFFSET)
+    $idSql = "SELECT o.id FROM orders o $where ORDER BY o.created_at DESC LIMIT $perPage OFFSET $offset";
+    $idStmt = $pdo->prepare($idSql);
+    $idStmt->execute($params);
+    $orderIds = $idStmt->fetchAll(\PDO::FETCH_COLUMN);
+
+    $rows = [];
+    if (!empty($orderIds)) {
+        // Fetch items for those orders
+        $in = implode(',', array_fill(0, count($orderIds), '?'));
+        $sql = "
+            SELECT 
+                o.id AS order_id,
+                o.transaction_id,
+                o.buyer_name,
+                o.buyer_phone,
+                o.buyer_telegram,
+                o.total_amount,
+                o.created_at,
+                oi.id AS item_id,
+                oi.delivery_status,
+                oi.proof_image_base64,
+                p.name AS product_name_current,
+                lk.license_key
+            FROM orders o
+            JOIN order_items oi ON oi.order_id = o.id
+            LEFT JOIN products p ON p.id = oi.product_id
+            LEFT JOIN license_keys lk ON lk.id = oi.license_key_id
+            WHERE o.id IN ($in)
+            ORDER BY o.created_at DESC, oi.id ASC
+        ";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($orderIds);
+        $rows = $stmt->fetchAll();
+    }
 
     // Group by order_id
     $orders = [];
@@ -285,7 +314,7 @@ public function sales(): void {
         $orders = array_filter($orders, fn($o) => !empty($o['items']));
     }
 
-    Response::view('admin/sales.php', compact('orders', 'tab', 'search', 'from', 'to'));
+    Response::view('admin/sales.php', compact('orders', 'tab', 'search', 'from', 'to', 'page', 'perPage', 'pages', 'total'));
 }
 
 

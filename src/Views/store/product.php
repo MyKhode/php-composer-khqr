@@ -11,31 +11,27 @@
 
     <div class="lg:col-span-6 space-y-5">
       <div>
-        <h1 class="text-3xl font-semibold"><?= htmlspecialchars($product['name'] ?? '') ?></h1>
-        <p class="text-neutral-400 mt-1">Category: <?= htmlspecialchars($product['category'] ?? '') ?></p>
-      </div>
-
-      <div class="prose prose-invert max-w-none text-neutral-200">
-        <?= nl2br(htmlspecialchars($product['description'] ?? '')) ?>
+        <h1 class="text-3xl font-semibold break-words"><?= htmlspecialchars($product['name'] ?? '') ?></h1>
+        <p class="text-neutral-400 mt-1 break-words">Category: <?= htmlspecialchars($product['category'] ?? '') ?></p>
       </div>
 
       <div class="rounded-xl border border-neutral-900 bg-neutral-900/40 p-4 space-y-2">
         <h2 class="text-neutral-200 font-medium mb-2">Product Info</h2>
-        <p><strong>Category:</strong> <?= htmlspecialchars($product['category'] ?? '-') ?></p>
-        <p><strong>Delivery Type:</strong>
-          <?= htmlspecialchars($product['delivery_type'] ?? 'N/A') ?>
+        <p class="break-words"><strong>Category:</strong> <span class="break-words"><?= htmlspecialchars($product['category'] ?? '-') ?></span></p>
+        <p class="break-words"><strong>Delivery Type:</strong>
+          <span class="break-words"><?= htmlspecialchars($product['delivery_type'] ?? 'N/A') ?></span>
         </p>
-        <p><strong>Link:</strong>
+        <p class="break-words"><strong>Link:</strong>
           <?php if (!empty($product['link'])): ?>
-            <a href="<?= htmlspecialchars($product['link']) ?>" target="_blank" class="text-blue-400 underline">
+            <a href="<?= htmlspecialchars($product['link']) ?>" target="_blank" class="text-blue-400 underline break-words break-all">
               <?= htmlspecialchars($product['link']) ?>
             </a>
           <?php else: ?>
             N/A
           <?php endif; ?>
         </p>
-        <p><strong>Description:</strong></p>
-        <div class="text-neutral-300 text-sm leading-relaxed">
+        <p class="break-words"><strong>Description:</strong></p>
+        <div class="text-neutral-300 text-sm leading-relaxed break-words">
           <?= nl2br(htmlspecialchars($product['description'] ?? 'No description available.')) ?>
         </div>
       </div>

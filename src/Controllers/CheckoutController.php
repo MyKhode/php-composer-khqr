@@ -128,11 +128,6 @@ class CheckoutController
                 $items->execute([$order['id']]);
 
                 foreach ($items as $it) {
-                    // Allocate an available key for the product
-                    $lk = $pdo->prepare('SELECT id, license_key FROM license_keys WHERE product_id=? AND is_sold=0 LIMIT 1 FOR UPDATE');
-                    $lk->execute([$it['product_id']]);
-                    $key = $lk->fetch();
-
                     // Get product info for UX and delivery logic
                     $pstmt = $pdo->prepare('SELECT name, delivery_type FROM products WHERE id=?');
                     $pstmt->execute([$it['product_id']]);
@@ -140,23 +135,36 @@ class CheckoutController
                     $productName = $p['name'] ?? ('Product #' . (int)$it['product_id']);
                     $deliveryType = strtolower(trim($p['delivery_type'] ?? ''));
 
-                    if ($key) {
-                        // mark sold + attach
-                        $pdo->prepare('UPDATE license_keys SET is_sold=1, sold_at=NOW(), order_id=? WHERE id=?')
-                            ->execute([$order['id'], $key['id']]);
-                        $pdo->prepare('UPDATE order_items SET license_key_id=? WHERE id=?')
-                            ->execute([$key['id'], $it['id']]);
+                    // Allocate ALL available keys for the product
+                    $lkAll = $pdo->prepare('SELECT id, license_key FROM license_keys WHERE product_id=? AND is_sold=0 FOR UPDATE');
+                    $lkAll->execute([$it['product_id']]);
+                    $keys = $lkAll->fetchAll();
+
+                    if ($keys) {
+                        $firstKeyId = null;
+                        foreach ($keys as $k) {
+                            $pdo->prepare('UPDATE license_keys SET is_sold=1, sold_at=NOW(), order_id=? WHERE id=?')
+                                ->execute([$order['id'], $k['id']]);
+                            if ($firstKeyId === null) {
+                                $firstKeyId = (int)$k['id'];
+                            }
+                            $keysOut[] = [
+                                'product' => $productName,
+                                'license_key' => $k['license_key'],
+                            ];
+                        }
+
+                        // Attach the first key to order_items for backward-compat reports
+                        if ($firstKeyId !== null) {
+                            $pdo->prepare('UPDATE order_items SET license_key_id=? WHERE id=?')
+                                ->execute([$firstKeyId, $it['id']]);
+                        }
 
                         // Auto-complete delivery for instant items
                         if ($deliveryType === 'instant') {
                             $pdo->prepare('UPDATE order_items SET delivery_status=\'completed\', updated_at=NOW() WHERE id=?')
                                 ->execute([$it['id']]);
                         }
-
-                        $keysOut[] = [
-                            'product' => $productName,
-                            'license_key' => $key['license_key'],
-                        ];
                     } else {
                         // If no key available, keep delivery as preparing regardless of delivery type
                         $keysOut[] = [
@@ -228,14 +236,13 @@ class CheckoutController
             return;
         }
 
-        // Collect keys + product names
+        // Collect all keys associated with this order (may be multiple per product)
         $stmt = $pdo->prepare("
             SELECT p.name AS product, lk.license_key
-            FROM order_items oi
-            LEFT JOIN license_keys lk ON lk.id = oi.license_key_id
-            LEFT JOIN products p ON p.id = oi.product_id
-            WHERE oi.order_id = ?
-            ORDER BY oi.id ASC
+            FROM license_keys lk
+            LEFT JOIN products p ON p.id = lk.product_id
+            WHERE lk.order_id = ?
+            ORDER BY lk.id ASC
         ");
         $stmt->execute([$order['id']]);
         $rows = $stmt->fetchAll();
