@@ -430,7 +430,7 @@ public function sales(): void {
         // ✅ Use your ImageUtil exactly
         $base64 = \App\Helpers\ImageUtil::compressToBase64(
             $_FILES['proof'],
-            45 * 1024,  // target ~45KB (fits safely in TEXT column)
+            125 * 1024,
             1024,
             82
         );
