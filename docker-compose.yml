@@ -1,9 +1,14 @@
+version: '3.8'
+
 services:
   app:
     build: .
+    container_name: khqr_app
+    depends_on:
+      - mysql
     environment:
-      DB_HOST: "host.docker.internal"
-      DB_PORT: "4987"
+      DB_HOST: "mysql"
+      DB_PORT: "3306"
       DB_NAME: "khqr_store"
       DB_USER: "root"
       DB_PASS: "ikhode"
@@ -19,3 +24,31 @@ services:
       - .:/var/www/html
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    restart: always
+
+  mysql:
+    image: mysql:8.0
+    container_name: khqr_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ikhode
+      MYSQL_DATABASE: khqr_store
+    ports:
+      - "4987:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: khqr_phpmyadmin
+    restart: always
+    ports:
+      - "9006:80"
+    environment:
+      PMA_HOST: mysql
+      MYSQL_ROOT_PASSWORD: ikhode
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:
