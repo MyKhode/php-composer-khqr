@@ -1,30 +1,22 @@
-version: '3.8'
-
 services:
   app:
     build: .
     container_name: khqr_app
+    restart: always
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: khqr_store
+      DB_USER: root
+      DB_PASS: ikhode
+      ADMIN_DEFAULT_USERNAME: admin
+      ADMIN_DEFAULT_PASSWORD: dareach@2k25
     depends_on:
       - mysql
-    environment:
-      DB_HOST: "mysql"
-      DB_PORT: "3306"
-      DB_NAME: "khqr_store"
-      DB_USER: "root"
-      DB_PASS: "ikhode"
-      BAKONG_DEV_TOKEN: ${BAKONG_DEV_TOKEN}
-      BAKONG_BANK_ACCOUNT: ${BAKONG_BANK_ACCOUNT}
-      BAKONG_MERCHANT_NAME: ${BAKONG_MERCHANT_NAME}
-      BAKONG_MERCHANT_CITY: ${BAKONG_MERCHANT_CITY}
-      ADMIN_DEFAULT_USERNAME: ${ADMIN_DEFAULT_USERNAME:-admin}
-      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-admin@2003}
-    ports:
-      - "80:80"
+    expose:
+      - "80" # internal only; Caddy will proxy to this
     volumes:
       - .:/var/www/html
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: always
 
   mysql:
     image: mariadb:10.6
@@ -33,11 +25,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ikhode
       MYSQL_DATABASE: khqr_store
-    ports:
-      - "4987:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
@@ -51,5 +40,21 @@ services:
     depends_on:
       - mysql
 
+  caddy:
+    image: caddy:latest
+    container_name: khqr_caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
 volumes:
   mysql_data:
+  caddy_data:
+  caddy_config:
