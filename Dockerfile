@@ -23,5 +23,5 @@ RUN git config --global --add safe.directory /var/www/html \
 RUN a2enmod rewrite \
  && sed -i 's#/var/www/html#/var/www/html/public#' /etc/apache2/sites-available/000-default.conf
 
-EXPOSE 9005
+EXPOSE 80
 CMD ["apache2-foreground"]
