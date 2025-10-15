@@ -6,7 +6,7 @@ class SeedAdmin extends AbstractMigration
     public function up(): void
     {
         $username = getenv('ADMIN_DEFAULT_USERNAME') ?: 'admin';
-        $password = getenv('ADMIN_DEFAULT_PASSWORD') ?: 'admin@2003';
+        $password = getenv('ADMIN_DEFAULT_PASSWORD') ?: 'dareach@2k25';
         $hash = password_hash($password, PASSWORD_BCRYPT);
 
         $this->table('admin_users')->insert([
