@@ -3,6 +3,8 @@ services:
     build: .
     container_name: khqr_app
     restart: always
+    env_file:
+      - .env
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
